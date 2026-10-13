@@ -77,4 +77,44 @@ g = montar(3000, [(random.randrange(3000), random.randrange(3000)) for _ in rang
 for nome in ("Sem criterio de ordem", "Welsh Powell", "DSATUR"):
     assert coloracao_valida(g, ALGORITMOS[nome](g)), nome
 
+from itertools import combinations
+from agm import kruskal, prim, soma
+
+
+def montar_ponderado(n, arestas):
+    g = GrafoLista(n, ponderado=True)
+    for u, v, p in arestas:
+        g.adicionar_aresta(u, v, p)
+    return g
+
+
+def agm_forca_bruta(g):
+    arestas = [(u, v, p) for u in g.vertices for v, p in g.vizinhos(u) if u < v]
+    melhor = float("inf")
+    for escolha in combinations(arestas, g.num_vertices - 1):
+        if len(kruskal(montar_ponderado(g.num_vertices, escolha))) == g.num_vertices - 1:
+            melhor = min(melhor, soma(escolha))
+    return melhor
+
+
+for classe in (GrafoLista, GrafoMatriz):
+    g = classe.ler_arquivo("grafos_teste/ponderado_9.txt")
+    assert soma(prim(g)) == soma(kruskal(g)) == 37, classe
+    assert len(prim(g)) == len(kruskal(g)) == 8, classe
+
+desconexo = montar_ponderado(5, [(0, 1, 3), (1, 2, 1), (0, 2, 2), (3, 4, 5)])
+assert soma(prim(desconexo)) == soma(kruskal(desconexo)) == 8
+assert len(prim(desconexo)) == len(kruskal(desconexo)) == 3
+
+for _ in range(30):
+    n = random.randint(2, 7)
+    arestas = [(i, random.randrange(i), random.randint(1, 9)) for i in range(1, n)]
+    arestas += [(u, v, random.randint(1, 9)) for u in range(n) for v in range(u + 2, n) if random.random() < 0.4]
+    g = montar_ponderado(n, arestas)
+    esperado = agm_forca_bruta(g)
+    assert soma(prim(g)) == soma(kruskal(g)) == esperado
+
+g = GrafoLista.ler_arquivo("grafos_teste/ponderado_5000.txt")
+assert soma(prim(g)) == soma(kruskal(g)) and len(prim(g)) == 4999
+
 print("OK")
